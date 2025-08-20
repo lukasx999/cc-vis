@@ -18,38 +18,37 @@ struct Node {
 };
 
 class TreeRenderer {
+    static constexpr rl::Vector2 m_node_offset { 0, 100 };
+    static constexpr float m_node_radius = 10.0;
+    static constexpr rl::Color m_node_color = rl::BLUE;
+    static constexpr rl::Color m_line_color = rl::GRAY;
+    static constexpr float m_spacing = 200.0;
+
 public:
     TreeRenderer() = default;
 
-    void render(const Node& root) {
-
-        rl::Vector2 origin {
-            rl::GetScreenWidth()/2.0f,
-            rl::GetScreenHeight()/4.0f,
-        };
-
-        render_rec(root, origin, 100);
+    void render(const Node& root, rl::Vector2 origin) {
+        render_rec(root, origin, m_spacing);
     }
 
 private:
     void recur_with_offset(const Node& child, rl::Vector2 pos, int idx, float spacing, bool right_else_left) {
-        rl::Vector2 offset { 0, 50 };
-        rl::Vector2 offset_cpy = offset;
+        rl::Vector2 offset = m_node_offset;
         int sign = right_else_left ? 1 : -1;
-        offset_cpy.x = sign * spacing * (idx+1);
-        rl::DrawLineV(pos, pos+offset_cpy, rl::GRAY);
-        render_rec(child, pos+offset_cpy, spacing/2);
+        offset.x = sign * spacing * (idx+1);
+        rl::DrawLineV(pos, pos+offset, m_line_color);
+        render_rec(child, pos+offset, spacing/2);
     }
 
-    void recur(const Node& child, rl::Vector2 pos, float spacing, rl::Vector2 offset) {
-        rl::DrawLineV(pos, pos+offset, rl::GRAY);
-        render_rec(child, pos+offset, spacing/2);
+    void recur(const Node& child, rl::Vector2 pos, float spacing) {
+        rl::Vector2 offset = pos+m_node_offset;
+        rl::DrawLineV(pos, offset, m_line_color);
+        render_rec(child, offset, spacing/2);
     }
 
     void render_rec(const Node& root, rl::Vector2 pos, float spacing) {
 
-        rl::DrawCircleV(pos, 5.0, rl::BLUE);
-        rl::Vector2 offset { 0, 50 };
+        rl::DrawCircleV(pos, m_node_radius, m_node_color);
 
         size_t child_count = root.children.size();
 
@@ -71,7 +70,7 @@ private:
             int sum = std::accumulate(nums.begin(), nums.end(), 0);
             int middle = sum/child_count;
 
-            recur(*root.children[middle], pos, spacing, offset);
+            recur(*root.children[middle], pos, spacing);
 
             for (auto&& [idx, child] : root.children | views::take(middle-1) | views::enumerate) {
                 recur_with_offset(*child, pos, idx, spacing, false);
@@ -122,7 +121,13 @@ int main() {
         rl::BeginDrawing();
 
         rl::ClearBackground(rl::BLACK);
-        rd.render(*root);
+
+        rl::Vector2 origin {
+            rl::GetScreenWidth()/2.0f,
+            rl::GetScreenHeight()/4.0f,
+        };
+
+        rd.render(*root, origin);
 
         rl::EndDrawing();
     }
