@@ -32,13 +32,18 @@ public:
     }
 
 private:
-    void recur(const Node& child, rl::Vector2 pos, int idx, float spacing, bool right_else_left) {
+    void recur_with_offset(const Node& child, rl::Vector2 pos, int idx, float spacing, bool right_else_left) {
         rl::Vector2 offset { 0, 50 };
         rl::Vector2 offset_cpy = offset;
         int sign = right_else_left ? 1 : -1;
         offset_cpy.x = sign * spacing * (idx+1);
         rl::DrawLineV(pos, pos+offset_cpy, rl::GRAY);
         render_rec(child, pos+offset_cpy, spacing/2);
+    }
+
+    void recur(const Node& child, rl::Vector2 pos, float spacing, rl::Vector2 offset) {
+        rl::DrawLineV(pos, pos+offset, rl::GRAY);
+        render_rec(child, pos+offset, spacing/2);
     }
 
     void render_rec(const Node& root, rl::Vector2 pos, float spacing) {
@@ -53,11 +58,11 @@ private:
             auto middle = child_count/2;
 
             for (auto&& [idx, child] : root.children | views::take(middle) | views::enumerate) {
-                recur(*child, pos, idx, spacing, false);
+                recur_with_offset(*child, pos, idx, spacing, false);
             }
 
             for (auto&& [idx, child] : root.children | views::drop(middle) | views::enumerate) {
-                recur(*child, pos, idx, spacing, true);
+                recur_with_offset(*child, pos, idx, spacing, true);
             }
 
         } else {
@@ -66,15 +71,14 @@ private:
             int sum = std::accumulate(nums.begin(), nums.end(), 0);
             int middle = sum/child_count;
 
-            rl::DrawLineV(pos, pos+offset, rl::GRAY);
-            render_rec(*root.children[middle], pos+offset, spacing/2);
+            recur(*root.children[middle], pos, spacing, offset);
 
             for (auto&& [idx, child] : root.children | views::take(middle-1) | views::enumerate) {
-                recur(*child, pos, idx, spacing, false);
+                recur_with_offset(*child, pos, idx, spacing, false);
             }
 
             for (auto&& [idx, child] : root.children | views::drop(middle) | views::enumerate) {
-                recur(*child, pos, idx, spacing, true);
+                recur_with_offset(*child, pos, idx, spacing, true);
             }
 
         }
