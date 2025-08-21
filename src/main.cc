@@ -53,6 +53,7 @@ public:
     }
 
 private:
+    // TODO: nsdmi
     struct RenderState {
         rl::Vector2 pos;
         float spacing;
@@ -70,7 +71,7 @@ private:
         rl::DrawLineEx(state.pos, state.pos + offset, state.line_thickness, m_line_color);
 
         state.pos += offset;
-        state.spacing /= 2;
+        state.spacing *= 2;
         state.radius *= 0.9;
         state.line_thickness *= 0.9;
         fn(node, state);
