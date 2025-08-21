@@ -27,7 +27,7 @@ concept ast_node = std::is_same_v<T, clang::Stmt*> ||
 
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
-    rl::Vector2 m_new_node_offset { 0, 100 };
+    static constexpr rl::Vector2 m_new_node_offset { 0, 100 };
     static constexpr float m_spacing = 200.0;
     static constexpr rl::Color m_stmt_color = rl::RED;
     static constexpr rl::Color m_decl_color = rl::BLUE;
@@ -57,12 +57,11 @@ private:
 
     enum class Direction { Left, Right };
 
-    // takes `this` as an argument, to allow passing methods via thunks
     template <ast_node Node>
-    using NodeHandler = std::function<void(ASTRenderer*, Node, State)>;
+    using NodeHandler = std::function<void(Node, State)>;
 
     template <ast_node Node>
-    void recur(State state, Node child, size_t idx, Direction dir, NodeHandler<Node> fn) {
+    void recur(State state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
 
         int sign = [&] {
             switch (dir) {
@@ -72,52 +71,67 @@ private:
             }
         }();
 
-        m_new_node_offset.x = sign * state.spacing * (idx+1);
-        rl::DrawLineV(state.pos, state.pos+m_new_node_offset, m_line_color);
+        rl::Vector2 offset = m_new_node_offset;
+        offset.x = sign * state.spacing * (idx+1);
+        rl::DrawLineV(state.pos, state.pos + offset, m_line_color);
 
-        state.pos += m_new_node_offset;
+        state.pos += offset;
         state.spacing /= 2;
-        fn(this, child, state);
+        fn(node, state);
     }
 
     template <ast_node Node>
-    void recur_without_offset(State state, Node child, NodeHandler<Node> handler) {
-        rl::DrawLineV(state.pos, state.pos+m_new_node_offset, m_line_color);
+    void recur_without_offset(State state, Node node, NodeHandler<Node> fn) {
+        rl::DrawLineV(state.pos, state.pos + m_new_node_offset, m_line_color);
+
         state.pos += m_new_node_offset;
         state.spacing /= 2;
-        handler(this, child, state);
+        fn(node, state);
     }
 
     template <ast_node Node>
-    void render_nodes_even(State state, std::span<Node> children, NodeHandler<Node> fn) {
+    void handle_nodes_even(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
-        size_t middle = children.size() / 2;
+        size_t middle = nodes.size() / 2;
 
-        for (auto&& [idx, child] : children | views::take(middle) | views::enumerate) {
+        for (auto&& [idx, child] : nodes | views::take(middle) | views::enumerate)
             recur(state, child, idx, Direction::Left, fn);
-        }
 
-        for (auto&& [idx, child] : children | views::drop(middle) | views::enumerate) {
+        for (auto&& [idx, child] : nodes | views::drop(middle) | views::enumerate)
             recur(state, child, idx, Direction::Right, fn);
-        }
+
     }
 
     template <ast_node Node>
-    void render_nodes_odd(State state, std::span<Node> children, NodeHandler<Node> fn) {
+    void handle_nodes_odd(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
-        auto nums = views::iota(1ul, children.size()+1);
+        auto nums = views::iota(1ul, nodes.size()+1);
         int sum = std::accumulate(nums.begin(), nums.end(), 0);
-        int middle = sum / children.size();
+        int middle = sum / nodes.size();
 
-        recur_without_offset(state, children[middle], fn);
+        recur_without_offset(state, nodes[middle], fn);
 
-        for (auto&& [idx, child] : children | views::take(middle-1) | views::enumerate) {
+        for (auto&& [idx, child] : nodes | views::take(middle-1) | views::enumerate)
             recur(state, child, idx, Direction::Left, fn);
+
+        for (auto&& [idx, child] : nodes | views::drop(middle) | views::enumerate)
+            recur(state, child, idx, Direction::Right, fn);
+
+    }
+
+    template <ast_node Node>
+    void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
+
+        if (children.size() == 1) {
+            recur_without_offset(state, children[0], fn);
+
+        } else if (children.size() % 2 == 0) {
+            handle_nodes_even(state, children, fn);
+
+        } else {
+            handle_nodes_odd(state, children, fn);
         }
 
-        for (auto&& [idx, child] : children | views::drop(middle) | views::enumerate) {
-            recur(state, child, idx, Direction::Right, fn);
-        }
     }
 
     void handle_decl(clang::Decl* decl, State state) {
@@ -144,20 +158,11 @@ private:
             children.push_back(child);
         }
 
-        size_t child_count = children.size();
+        auto thunk = [&](clang::Stmt* stmt, State state) {
+            handle_stmt(stmt, state);
+        };
 
-        auto callback = [](ASTRenderer* rd, clang::Stmt* stmt, State state) { rd->handle_stmt(stmt, state); };
-
-        if (child_count == 1) {
-            recur_without_offset<clang::Stmt*>(state, children[0], callback);
-
-        } else if (child_count % 2 == 0) {
-            render_nodes_even<clang::Stmt*>(state, children, callback);
-
-        } else {
-            render_nodes_odd<clang::Stmt*>(state, children, callback);
-
-        }
+        handle_children<clang::Stmt*>(state, children, thunk);
 
     }
 
