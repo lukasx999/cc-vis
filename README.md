@@ -1,2 +1,1 @@
-# cc-vis
-clang ast visualizer
+# Clang AST Visualizer
