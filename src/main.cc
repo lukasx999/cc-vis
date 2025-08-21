@@ -40,9 +40,7 @@ public:
 
     void HandleTranslationUnit(clang::ASTContext&) override {
         auto decl = m_ctx.getTranslationUnitDecl();
-
-        RenderState state;
-        handle_decl(decl, state);
+        handle_decl(decl, RenderState{});
     }
 
 private:
@@ -141,6 +139,8 @@ private:
     template <ClangASTNode Node>
     static void handle_children(RenderState state, std::span<Node> children, NodeHandler<Node> fn) {
 
+        if (children.empty()) return;
+
         if (children.size() == 1) {
             recur_without_offset(state, children.front(), fn);
 
@@ -159,13 +159,22 @@ private:
             handle_decl_ctx(decl_ctx, state);
 
         if (decl->hasBody()) {
+
+            // BUG: renders two new nodes (see probe.cc)
+            // functiondecl is both declctx and has body
             auto thunk = [&](clang::Stmt* stmt, RenderState state) {
                 handle_stmt(stmt, state);
             };
+
             recur_without_offset<clang::Stmt*>(state, decl->getBody(), thunk);
+
+            // handle_stmt(decl->getBody(), state);
         }
 
-        render_node(state, m_decl_color);
+        if (llvm::isa<clang::FunctionDecl>(decl))
+            render_node(state, rl::PURPLE);
+        else
+            render_node(state, m_decl_color);
     }
 
     void handle_decl_ctx(clang::DeclContext* decl_ctx, RenderState state) {
@@ -204,8 +213,9 @@ private:
 
         std::vector<clang::Stmt*> children;
 
-        for (auto& child : stmt->children())
+        for (auto& child : stmt->children()) {
             children.push_back(child);
+        }
 
         auto thunk = [&](clang::Stmt* stmt, RenderState state) {
             handle_stmt(stmt, state);
@@ -216,7 +226,7 @@ private:
         if (auto decl_stmt = llvm::dyn_cast_or_null<clang::DeclStmt>(stmt))
             handle_decl_stmt(decl_stmt, state);
 
-        // draw call down here, so line dont get rendered above circles
+        // draw call down here, so line doesnt get rendered above circles
         render_node(state, m_stmt_color);
     }
 
@@ -241,6 +251,8 @@ public:
 
 int main() {
 
+    // TODO: use backend-agnostic interface (png, pdf, raylib, web)
+
     std::string error;
     // TODO: get default compilation database
     auto db = tooling::CompilationDatabase::autoDetectFromSource("compile_flags.txt", error);
@@ -249,6 +261,7 @@ int main() {
     std::vector<std::string> sources{"probe.cc"};
     tooling::ClangTool tool(*db, sources);
 
+    rl::SetTraceLogLevel(rl::LOG_ERROR);
     rl::InitWindow(1600, 900, "cc-vis");
 
     while (!rl::WindowShouldClose()) {
