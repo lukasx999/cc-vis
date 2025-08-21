@@ -26,9 +26,6 @@ concept ClangASTNode = std::is_same_v<T, clang::Stmt*> ||
 std::is_same_v<T, clang::Type*> ||
 std::is_same_v<T, clang::Decl*>;
 
-// TODO: maybe render lines between nodes as bezier curves?
-// TODO: decrease node radius when recuring
-
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
     static constexpr rl::Vector2 m_new_node_offset { 0, 100 };
@@ -244,6 +241,7 @@ public:
 int main() {
 
     std::string error;
+    // TODO: get default compilation database
     auto db = tooling::CompilationDatabase::autoDetectFromSource("compile_flags.txt", error);
     std::println(stderr, "{}", error);
 
