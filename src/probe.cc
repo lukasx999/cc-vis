@@ -1,5 +1,4 @@
 void foo() {
-    int x = 1;
 }
 
 int main() {
@@ -10,15 +9,19 @@ int main() {
 
         while (1) {
             foo();
+            int x = 1;
         }
         while (1) {
             foo();
+            int x = 1;
         }
         while (1) {
             foo();
+            int x = 1;
         }
         while (1) {
             foo();
+            int x = 1;
         }
 
     }
@@ -27,15 +30,19 @@ int main() {
 
         while (1) {
             1;
+            int x = 1;
         }
         while (1) {
             1;
+            int x = 1;
         }
         while (1) {
             1;
+            int x = 1;
         }
         while (1) {
             1;
+            int x = 1;
         }
 
     }
