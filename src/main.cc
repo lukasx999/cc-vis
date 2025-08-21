@@ -160,8 +160,12 @@ private:
         if (auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl))
             handle_decl_ctx(decl_ctx, state);
 
-        if (decl->hasBody())
-            handle_stmt(decl->getBody(), state);
+        if (decl->hasBody()) {
+            auto thunk = [&](clang::Stmt* stmt, RenderState state) {
+                handle_stmt(stmt, state);
+            };
+            recur_without_offset<clang::Stmt*>(state, decl->getBody(), thunk);
+        }
 
         render_node(state, m_decl_color);
     }
@@ -201,8 +205,9 @@ private:
     void handle_stmt(clang::Stmt* stmt, RenderState state) {
 
         std::vector<clang::Stmt*> children;
+
         for (auto& child : stmt->children())
-        children.push_back(child);
+            children.push_back(child);
 
         auto thunk = [&](clang::Stmt* stmt, RenderState state) {
             handle_stmt(stmt, state);
@@ -215,7 +220,6 @@ private:
 
         // draw call down here, so line dont get rendered above circles
         render_node(state, m_stmt_color);
-
     }
 
     void render_node(const RenderState& state, rl::Color color) {
