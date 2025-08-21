@@ -122,6 +122,7 @@ private:
 
     }
 
+    // TODO: put this outside of class
     template <ClangASTNode Node>
     static void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
 
@@ -139,8 +140,7 @@ private:
 
     void handle_decl(clang::Decl* decl, State state) {
 
-        auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl);
-        if (decl_ctx != nullptr)
+        if (auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl))
             handle_decl_ctx(decl_ctx, state);
 
         if (decl->hasBody())
@@ -194,8 +194,7 @@ private:
 
         handle_children<clang::Stmt*>(state, children, thunk);
 
-        auto decl_stmt = llvm::dyn_cast_or_null<clang::DeclStmt>(stmt);
-        if (decl_stmt != nullptr)
+        if (auto decl_stmt = llvm::dyn_cast_or_null<clang::DeclStmt>(stmt))
             handle_decl_stmt(decl_stmt, state);
 
         // draw call down here, so line dont get rendered above circles
@@ -234,7 +233,6 @@ int main() {
         {
             rl::ClearBackground(rl::BLACK);
             tool.run(tooling::newFrontendActionFactory<ASTRendererAction>().get());
-
         }
         rl::EndDrawing();
     }
