@@ -22,7 +22,8 @@ namespace tooling = clang::tooling;
 namespace views = std::views;
 
 template <typename T>
-concept ClangASTNode = std::is_same_v<T, clang::Stmt*> ||
+concept ClangASTNode =
+std::is_same_v<T, clang::Stmt*> ||
 std::is_same_v<T, clang::Type*> ||
 std::is_same_v<T, clang::Decl*>;
 
