@@ -1,5 +1,6 @@
 #include <algorithm>
 #include <numeric>
+#include <functional>
 #include <print>
 #include <memory>
 #include <vector>
@@ -86,9 +87,39 @@ private:
 
 };
 
+struct A {};
+struct B {};
 
+void foo(A a) {
+}
 
+void bar(B b) {
+}
 
+template <typename T>
+void recur(T arg, std::function<void(T)> fn) {
+    fn(arg);
+}
+
+void x() {
+    recur<A>(A{}, foo);
+    recur<B>(B{}, bar);
+}
+
+struct S {
+
+    void foo(std::function<void(S*)> fn) {
+        fn(this);
+    }
+
+    void baz() {
+    }
+
+    void bar() {
+        foo([](S* s) {s->baz();});
+    }
+
+};
 
 int main() {
 
@@ -112,7 +143,7 @@ int main() {
     root->children.push_back(std::move(a));
     root->children.push_back(std::move(b));
     root->children.push_back(std::move(c));
-    // root->children.push_back(std::move(d));
+    root->children.push_back(std::move(d));
 
     TreeRenderer rd;
     rl::InitWindow(1600, 900, "cc-vis");
