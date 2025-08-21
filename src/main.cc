@@ -48,12 +48,12 @@ public:
             rl::GetScreenHeight()/4.0f,
         };
 
-        State state { origin, m_spacing };
+        RenderState state { origin, m_spacing };
         handle_decl(decl, state);
     }
 
 private:
-    struct State {
+    struct RenderState {
         rl::Vector2 pos;
         float spacing;
     };
@@ -61,21 +61,10 @@ private:
     enum class Direction { Left, Right };
 
     template <ClangASTNode Node>
-    using NodeHandler = std::function<void(Node, State)>;
+    using NodeHandler = std::function<void(Node, RenderState)>;
 
     template <ClangASTNode Node>
-    static void recur(State state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
-
-        int sign = [&] {
-            switch (dir) {
-                using enum Direction;
-                case Left: return -1;
-                case Right: return 1;
-            }
-        }();
-
-        rl::Vector2 offset = m_new_node_offset;
-        offset.x = sign * state.spacing * (idx+1);
+    static void render(rl::Vector2 offset, RenderState state, Node node, NodeHandler<Node> fn) {
         rl::DrawLineV(state.pos, state.pos + offset, m_line_color);
 
         state.pos += offset;
@@ -84,17 +73,31 @@ private:
     }
 
     template <ClangASTNode Node>
-    static void recur_without_offset(State state, Node node, NodeHandler<Node> fn) {
-        rl::DrawLineV(state.pos, state.pos + m_new_node_offset, m_line_color);
+    static void recur(RenderState state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
 
-        state.pos += m_new_node_offset;
-        state.spacing /= 2;
-        fn(node, state);
+        int sign = [&] {
+            switch (dir) {
+                using enum Direction;
+                case Left:  return -1;
+                case Right: return  1;
+            }
+        }();
+
+        rl::Vector2 offset = m_new_node_offset;
+        offset.x = sign * state.spacing * (idx+1);
+
+        render(offset, state, node, fn);
     }
 
     template <ClangASTNode Node>
-    static void handle_nodes_even(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
+    static void recur_without_offset(RenderState state, Node node, NodeHandler<Node> fn) {
+        render(m_new_node_offset, state, node, fn);
+    }
 
+    template <ClangASTNode Node>
+    static void handle_nodes_even(RenderState state, std::span<Node> nodes, NodeHandler<Node> fn) {
+
+        // slice the children list in half, first rendering the left side, then the right side
         size_t middle = nodes.size() / 2;
 
         for (auto&& [idx, child] : nodes | views::take(middle) | views::enumerate)
@@ -106,7 +109,7 @@ private:
     }
 
     template <ClangASTNode Node>
-    static void handle_nodes_odd(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
+    static void handle_nodes_odd(RenderState state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
         auto nums = views::iota(1ul, nodes.size()+1);
         int sum = std::accumulate(nums.begin(), nums.end(), 0);
@@ -122,12 +125,13 @@ private:
 
     }
 
-    // TODO: put this outside of class
+    // calls the given callback for all child nodes, calculating the correct position on the scren for each one
+    // TODO: put this outside of the class
     template <ClangASTNode Node>
-    static void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
+    static void handle_children(RenderState state, std::span<Node> children, NodeHandler<Node> fn) {
 
         if (children.size() == 1) {
-            recur_without_offset(state, children[0], fn);
+            recur_without_offset(state, children.front(), fn);
 
         } else if (children.size() % 2 == 0) {
             handle_nodes_even(state, children, fn);
@@ -138,7 +142,7 @@ private:
 
     }
 
-    void handle_decl(clang::Decl* decl, State state) {
+    void handle_decl(clang::Decl* decl, RenderState state) {
 
         if (auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl))
             handle_decl_ctx(decl_ctx, state);
@@ -147,10 +151,9 @@ private:
             handle_stmt(decl->getBody(), state);
 
         rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
-
     }
 
-    void handle_decl_ctx(clang::DeclContext* decl_ctx, State state) {
+    void handle_decl_ctx(clang::DeclContext* decl_ctx, RenderState state) {
 
         std::vector<clang::Decl*> children;
         for (auto& child : decl_ctx->decls()) {
@@ -159,14 +162,14 @@ private:
             children.push_back(child);
         }
 
-        auto thunk = [&](clang::Decl* decl, State state) {
+        auto thunk = [&](clang::Decl* decl, RenderState state) {
             handle_decl(decl, state);
         };
 
         handle_children<clang::Decl*>(state, children, thunk);
     }
 
-    void handle_decl_stmt(clang::DeclStmt* decl_stmt, State state) {
+    void handle_decl_stmt(clang::DeclStmt* decl_stmt, RenderState state) {
 
         std::vector<clang::Decl*> children;
         for (auto& child : decl_stmt->decls()) {
@@ -175,20 +178,20 @@ private:
             children.push_back(child);
         }
 
-        auto thunk = [&](clang::Decl* decl, State state) {
+        auto thunk = [&](clang::Decl* decl, RenderState state) {
             handle_decl(decl, state);
         };
 
         handle_children<clang::Decl*>(state, children, thunk);
     }
 
-    void handle_stmt(clang::Stmt* stmt, State state) {
+    void handle_stmt(clang::Stmt* stmt, RenderState state) {
 
         std::vector<clang::Stmt*> children;
         for (auto& child : stmt->children())
             children.push_back(child);
 
-        auto thunk = [&](clang::Stmt* stmt, State state) {
+        auto thunk = [&](clang::Stmt* stmt, RenderState state) {
             handle_stmt(stmt, state);
         };
 
