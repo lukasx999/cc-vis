@@ -1,14 +1,14 @@
 #include <print>
 #include <string>
-#include <cmath>
 #include <ranges>
-#include <algorithm>
 #include <numeric>
 #include <memory>
 #include <vector>
+#include <cmath>
 
 #include <clang/Frontend/FrontendActions.h>
 #include <clang/Tooling/CommonOptionsParser.h>
+#include <clang/Tooling/Execution.h>
 #include <clang/Tooling/Tooling.h>
 #include <clang/AST/AST.h>
 #include <clang/AST/Expr.h>
@@ -25,6 +25,9 @@ template <typename T>
 concept ast_node = std::is_same_v<T, clang::Stmt*> ||
                    std::is_same_v<T, clang::Decl*>;
 
+// TODO: maybe render lines between nodes as bezier curves?
+// TODO: decrease node radius when recuring
+
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
     static constexpr rl::Vector2 m_new_node_offset { 0, 50 };
@@ -37,8 +40,8 @@ class ASTRenderer : public clang::ASTConsumer {
 public:
     ASTRenderer(clang::ASTContext& ctx) : m_ctx(ctx) { }
 
-    void HandleTranslationUnit(clang::ASTContext& ctx) override {
-        auto decl = ctx.getTranslationUnitDecl();
+    void HandleTranslationUnit(clang::ASTContext&) override {
+        auto decl = m_ctx.getTranslationUnitDecl();
 
         rl::Vector2 origin {
             rl::GetScreenWidth()/2.0f,
@@ -61,7 +64,7 @@ private:
     using NodeHandler = std::function<void(Node, State)>;
 
     template <ast_node Node>
-    void recur(State state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
+    static void recur(State state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
 
         int sign = [&] {
             switch (dir) {
@@ -81,7 +84,7 @@ private:
     }
 
     template <ast_node Node>
-    void recur_without_offset(State state, Node node, NodeHandler<Node> fn) {
+    static void recur_without_offset(State state, Node node, NodeHandler<Node> fn) {
         rl::DrawLineV(state.pos, state.pos + m_new_node_offset, m_line_color);
 
         state.pos += m_new_node_offset;
@@ -90,7 +93,7 @@ private:
     }
 
     template <ast_node Node>
-    void handle_nodes_even(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
+    static void handle_nodes_even(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
         size_t middle = nodes.size() / 2;
 
@@ -103,7 +106,7 @@ private:
     }
 
     template <ast_node Node>
-    void handle_nodes_odd(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
+    static void handle_nodes_odd(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
         auto nums = views::iota(1ul, nodes.size()+1);
         int sum = std::accumulate(nums.begin(), nums.end(), 0);
@@ -120,7 +123,7 @@ private:
     }
 
     template <ast_node Node>
-    void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
+    static void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
 
         if (children.size() == 1) {
             recur_without_offset(state, children[0], fn);
@@ -163,6 +166,21 @@ private:
         handle_children<clang::Decl*>(state, children, thunk);
     }
 
+    void handle_decl_stmt(clang::DeclStmt* decl_stmt, State state) {
+
+        std::vector<clang::Decl*> children;
+        for (auto& child : decl_stmt->decls()) {
+            // skip implementation generated nodes
+            if (child->isImplicit()) continue;
+            children.push_back(child);
+        }
+
+        auto thunk = [&](clang::Decl* decl, State state) {
+            handle_decl(decl, state);
+        };
+
+        handle_children<clang::Decl*>(state, children, thunk);
+    }
 
     void handle_stmt(clang::Stmt* stmt, State state) {
 
@@ -175,6 +193,10 @@ private:
         };
 
         handle_children<clang::Stmt*>(state, children, thunk);
+
+        auto decl_stmt = llvm::dyn_cast_or_null<clang::DeclStmt>(stmt);
+        if (decl_stmt != nullptr)
+            handle_decl_stmt(decl_stmt, state);
 
         // draw call down here, so line dont get rendered above circles
         rl::DrawCircleV(state.pos, m_node_radius, m_stmt_color);
@@ -202,7 +224,7 @@ int main() {
     auto db = tooling::CompilationDatabase::autoDetectFromSource("compile_flags.txt", error);
     std::println(stderr, "{}", error);
 
-    std::vector<std::string> sources{"foo.cc"};
+    std::vector<std::string> sources{"probe.cc"};
     tooling::ClangTool tool(*db, sources);
 
     rl::InitWindow(1600, 900, "cc-vis");

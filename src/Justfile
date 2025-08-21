@@ -8,5 +8,5 @@ run: build
     ./build/cc-vis
 
 dump:
-    clang++ -Xclang -ast-dump -fsyntax-only foo.cc
+    clang++ -Xclang -ast-dump -fsyntax-only probe.cc
 
