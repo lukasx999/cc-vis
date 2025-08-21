@@ -151,8 +151,6 @@ private:
 
     void handle_stmt(clang::Stmt* stmt, State state) {
 
-        rl::DrawCircleV(state.pos, m_node_radius, m_stmt_color);
-
         std::vector<clang::Stmt*> children;
         for (auto& child : stmt->children()) {
             children.push_back(child);
@@ -163,6 +161,9 @@ private:
         };
 
         handle_children<clang::Stmt*>(state, children, thunk);
+
+        // draw call down here, so line dont get rendered above circles
+        rl::DrawCircleV(state.pos, m_node_radius, m_stmt_color);
 
     }
 
