@@ -31,11 +31,9 @@ concept ClangASTNode = std::is_same_v<T, clang::Stmt*> ||
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
     static constexpr rl::Vector2 m_new_node_offset { 0, 50 };
-    static constexpr float m_spacing = 100.0;
     static constexpr rl::Color m_stmt_color = rl::RED;
     static constexpr rl::Color m_decl_color = rl::BLUE;
     static constexpr rl::Color m_line_color = rl::GRAY;
-    static constexpr float m_node_radius = 5.0;
 
 public:
     ASTRenderer(clang::ASTContext& ctx) : m_ctx(ctx) { }
@@ -43,22 +41,19 @@ public:
     void HandleTranslationUnit(clang::ASTContext&) override {
         auto decl = m_ctx.getTranslationUnitDecl();
 
-        rl::Vector2 origin {
-            rl::GetScreenWidth()/2.0f,
-            rl::GetScreenHeight()/4.0f,
-        };
-
-        RenderState state { origin, m_spacing, m_node_radius, 3 };
+        RenderState state;
         handle_decl(decl, state);
     }
 
 private:
-    // TODO: nsdmi
     struct RenderState {
-        rl::Vector2 pos;
-        float spacing;
-        float radius;
-        float line_thickness;
+        rl::Vector2 pos {
+            rl::GetScreenWidth()/2.0f,
+            rl::GetScreenHeight()/4.0f,
+        };
+        float spacing = 100.0;
+        float radius = 5.0;
+        RenderState() = default;
     };
 
     enum class Direction { Left, Right };
@@ -68,12 +63,11 @@ private:
 
     template <ClangASTNode Node>
     static void render(rl::Vector2 offset, RenderState state, Node node, NodeHandler<Node> fn) {
-        rl::DrawLineEx(state.pos, state.pos + offset, state.line_thickness, m_line_color);
+        rl::DrawLineV(state.pos, state.pos + offset, m_line_color);
 
         state.pos += offset;
-        state.spacing *= 2;
+        state.spacing /= 2;
         state.radius *= 0.9;
-        state.line_thickness *= 0.9;
         fn(node, state);
     }
 
