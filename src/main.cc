@@ -84,7 +84,7 @@ private:
         }();
 
         rl::Vector2 offset = m_new_node_offset;
-        offset.x = sign * state.spacing * (idx+1);
+        offset.x = sign * state.spacing * (idx + 1);
 
         render(offset, state, node, fn);
     }
