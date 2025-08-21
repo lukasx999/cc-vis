@@ -22,8 +22,8 @@ namespace tooling = clang::tooling;
 namespace views = std::views;
 
 template <typename T>
-concept ast_node = std::is_same_v<T, clang::Stmt*> ||
-                   std::is_same_v<T, clang::Decl*>;
+concept ClangASTNode = std::is_same_v<T, clang::Stmt*> ||
+                       std::is_same_v<T, clang::Decl*>;
 
 // TODO: maybe render lines between nodes as bezier curves?
 // TODO: decrease node radius when recuring
@@ -60,10 +60,10 @@ private:
 
     enum class Direction { Left, Right };
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     using NodeHandler = std::function<void(Node, State)>;
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     static void recur(State state, Node node, size_t idx, Direction dir, NodeHandler<Node> fn) {
 
         int sign = [&] {
@@ -83,7 +83,7 @@ private:
         fn(node, state);
     }
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     static void recur_without_offset(State state, Node node, NodeHandler<Node> fn) {
         rl::DrawLineV(state.pos, state.pos + m_new_node_offset, m_line_color);
 
@@ -92,7 +92,7 @@ private:
         fn(node, state);
     }
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     static void handle_nodes_even(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
         size_t middle = nodes.size() / 2;
@@ -105,7 +105,7 @@ private:
 
     }
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     static void handle_nodes_odd(State state, std::span<Node> nodes, NodeHandler<Node> fn) {
 
         auto nums = views::iota(1ul, nodes.size()+1);
@@ -122,7 +122,7 @@ private:
 
     }
 
-    template <ast_node Node>
+    template <ClangASTNode Node>
     static void handle_children(State state, std::span<Node> children, NodeHandler<Node> fn) {
 
         if (children.size() == 1) {
