@@ -48,7 +48,7 @@ public:
             rl::GetScreenHeight()/4.0f,
         };
 
-        RenderState state { origin, m_spacing };
+        RenderState state { origin, m_spacing, m_node_radius, 3 };
         handle_decl(decl, state);
     }
 
@@ -56,6 +56,8 @@ private:
     struct RenderState {
         rl::Vector2 pos;
         float spacing;
+        float radius;
+        float line_thickness;
     };
 
     enum class Direction { Left, Right };
@@ -65,10 +67,12 @@ private:
 
     template <ClangASTNode Node>
     static void render(rl::Vector2 offset, RenderState state, Node node, NodeHandler<Node> fn) {
-        rl::DrawLineV(state.pos, state.pos + offset, m_line_color);
+        rl::DrawLineEx(state.pos, state.pos + offset, state.line_thickness, m_line_color);
 
         state.pos += offset;
         state.spacing /= 2;
+        state.radius *= 0.9;
+        state.line_thickness *= 0.9;
         fn(node, state);
     }
 
@@ -150,7 +154,7 @@ private:
         if (decl->hasBody())
             handle_stmt(decl->getBody(), state);
 
-        rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
+        render_node(state, m_decl_color);
     }
 
     void handle_decl_ctx(clang::DeclContext* decl_ctx, RenderState state) {
@@ -201,8 +205,12 @@ private:
             handle_decl_stmt(decl_stmt, state);
 
         // draw call down here, so line dont get rendered above circles
-        rl::DrawCircleV(state.pos, m_node_radius, m_stmt_color);
+        render_node(state, m_stmt_color);
 
+    }
+
+    void render_node(const RenderState& state, rl::Color color) {
+        rl::DrawCircleV(state.pos, state.radius, color);
     }
 
 };
