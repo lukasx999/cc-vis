@@ -63,7 +63,19 @@ private:
 
     template <ClangASTNode Node>
     static void render(rl::Vector2 offset, RenderState state, Node node, NodeHandler<Node> fn) {
-        rl::DrawLineV(state.pos, state.pos + offset, m_line_color);
+
+#if 0
+        rl::DrawLineEx(state.pos, state.pos + offset, 2.0, m_line_color);
+#else
+        std::array points {
+            state.pos,
+            state.pos + rl::Vector2{offset.x / 2.0f, offset.y * 0.75f},
+            state.pos + rl::Vector2{offset.x / 2.0f, offset.y * 0.25f},
+            state.pos + offset
+        };
+        static_assert(points.size() == 4);
+        rl::DrawSplineBezierCubic(points.data(), points.size(), 2.0, m_line_color);
+#endif
 
         state.pos += offset;
         state.spacing /= 2;
@@ -238,12 +250,6 @@ int main() {
         rl::BeginDrawing();
         {
             rl::ClearBackground(rl::BLACK);
-            std::array points {
-                rl::Vector2{0, 0},
-                rl::Vector2{50, 50},
-                rl::Vector2{100, 100},
-            };
-            rl::DrawSplineBezierQuadratic(points.data(), points.size(), 3.0, rl::PURPLE);
             tool.run(tooling::newFrontendActionFactory<ASTRendererAction>().get());
         }
         rl::EndDrawing();
