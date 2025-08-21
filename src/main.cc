@@ -238,6 +238,12 @@ int main() {
         rl::BeginDrawing();
         {
             rl::ClearBackground(rl::BLACK);
+            std::array points {
+                rl::Vector2{0, 0},
+                rl::Vector2{50, 50},
+                rl::Vector2{100, 100},
+            };
+            rl::DrawSplineBezierQuadratic(points.data(), points.size(), 3.0, rl::PURPLE);
             tool.run(tooling::newFrontendActionFactory<ASTRendererAction>().get());
         }
         rl::EndDrawing();
