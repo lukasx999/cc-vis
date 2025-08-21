@@ -34,6 +34,7 @@ class ASTRenderer : public clang::ASTConsumer {
     static constexpr rl::Color m_stmt_color = rl::RED;
     static constexpr rl::Color m_decl_color = rl::BLUE;
     static constexpr rl::Color m_line_color = rl::GRAY;
+    static constexpr float m_line_thickness = 2.0;
 
 public:
     ASTRenderer(clang::ASTContext& ctx) : m_ctx(ctx) { }
@@ -65,7 +66,7 @@ private:
     static void render(rl::Vector2 offset, RenderState state, Node node, NodeHandler<Node> fn) {
 
 #if 0
-        rl::DrawLineEx(state.pos, state.pos + offset, 2.0, m_line_color);
+        rl::DrawLineEx(state.pos, state.pos + offset, m_line_thickness, m_line_color);
 #else
         std::array points {
             state.pos,
@@ -74,7 +75,7 @@ private:
             state.pos + offset
         };
         static_assert(points.size() == 4);
-        rl::DrawSplineBezierCubic(points.data(), points.size(), 2.0, m_line_color);
+        rl::DrawSplineBezierCubic(points.data(), points.size(), m_line_thickness, m_line_color);
 #endif
 
         state.pos += offset;
