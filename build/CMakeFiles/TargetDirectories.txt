@@ -1,0 +1,3 @@
+/home/lukas/code/repos/cc-vis/build/CMakeFiles/cc-vis.dir
+/home/lukas/code/repos/cc-vis/build/CMakeFiles/edit_cache.dir
+/home/lukas/code/repos/cc-vis/build/CMakeFiles/rebuild_cache.dir

@@ -1,0 +1,8 @@
+[
+{
+  "directory": "/home/lukas/code/repos/cc-vis/build",
+  "command": "/usr/bin/clang++ -Wall -Wextra -pedantic -O3 -ggdb -std=gnu++23 -fcolor-diagnostics -o CMakeFiles/cc-vis.dir/main.cc.o -c /home/lukas/code/repos/cc-vis/main.cc",
+  "file": "/home/lukas/code/repos/cc-vis/main.cc",
+  "output": "CMakeFiles/cc-vis.dir/main.cc.o"
+}
+]

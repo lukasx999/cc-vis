@@ -1,0 +1,7 @@
+{
+	"InstallScripts" : 
+	[
+		"/home/lukas/code/repos/cc-vis/build/cmake_install.cmake"
+	],
+	"Parallel" : false
+}
