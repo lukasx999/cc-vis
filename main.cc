@@ -27,12 +27,12 @@ concept ast_node = std::is_same_v<T, clang::Stmt*> ||
 
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
-    static constexpr rl::Vector2 m_new_node_offset { 0, 100 };
-    static constexpr float m_spacing = 200.0;
+    static constexpr rl::Vector2 m_new_node_offset { 0, 50 };
+    static constexpr float m_spacing = 100.0;
     static constexpr rl::Color m_stmt_color = rl::RED;
     static constexpr rl::Color m_decl_color = rl::BLUE;
     static constexpr rl::Color m_line_color = rl::GRAY;
-    static constexpr float m_node_radius = 10.0;
+    static constexpr float m_node_radius = 5.0;
 
 public:
     ASTRenderer(clang::ASTContext& ctx) : m_ctx(ctx) { }
@@ -136,25 +136,39 @@ private:
 
     void handle_decl(clang::Decl* decl, State state) {
 
-        rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
-
         auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl);
-        if (decl_ctx != nullptr) {
-            for (auto& decl : decl_ctx->decls())
-                handle_decl(decl, state);
-        }
+        if (decl_ctx != nullptr)
+            handle_decl_ctx(decl_ctx, state);
 
         if (decl->hasBody())
             handle_stmt(decl->getBody(), state);
 
+        rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
+
     }
+
+    void handle_decl_ctx(clang::DeclContext* decl_ctx, State state) {
+
+        std::vector<clang::Decl*> children;
+        for (auto& child : decl_ctx->decls()) {
+            // skip implementation generated nodes
+            if (child->isImplicit()) continue;
+            children.push_back(child);
+        }
+
+        auto thunk = [&](clang::Decl* decl, State state) {
+            handle_decl(decl, state);
+        };
+
+        handle_children<clang::Decl*>(state, children, thunk);
+    }
+
 
     void handle_stmt(clang::Stmt* stmt, State state) {
 
         std::vector<clang::Stmt*> children;
-        for (auto& child : stmt->children()) {
+        for (auto& child : stmt->children())
             children.push_back(child);
-        }
 
         auto thunk = [&](clang::Stmt* stmt, State state) {
             handle_stmt(stmt, state);
