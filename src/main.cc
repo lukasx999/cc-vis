@@ -23,14 +23,15 @@ namespace views = std::views;
 
 template <typename T>
 concept ClangASTNode = std::is_same_v<T, clang::Stmt*> ||
-                       std::is_same_v<T, clang::Decl*>;
+std::is_same_v<T, clang::Type*> ||
+std::is_same_v<T, clang::Decl*>;
 
 // TODO: maybe render lines between nodes as bezier curves?
 // TODO: decrease node radius when recuring
 
 class ASTRenderer : public clang::ASTConsumer {
     clang::ASTContext& m_ctx;
-    static constexpr rl::Vector2 m_new_node_offset { 0, 50 };
+    static constexpr rl::Vector2 m_new_node_offset { 0, 100 };
     static constexpr rl::Color m_stmt_color = rl::RED;
     static constexpr rl::Color m_decl_color = rl::BLUE;
     static constexpr rl::Color m_line_color = rl::GRAY;
@@ -49,11 +50,11 @@ public:
 private:
     struct RenderState {
         rl::Vector2 pos {
-            rl::GetScreenWidth()/2.0f,
-            rl::GetScreenHeight()/4.0f,
+            rl::GetScreenWidth()  / 2.0f,
+            rl::GetScreenHeight() / 4.0f,
         };
-        float spacing = 100.0;
-        float radius = 5.0;
+        float spacing = 200.0;
+        float radius = 10.0;
         RenderState() = default;
     };
 
@@ -113,10 +114,10 @@ private:
         size_t middle = nodes.size() / 2;
 
         for (auto&& [idx, child] : nodes | views::take(middle) | views::enumerate)
-            recur(state, child, idx, Direction::Left, fn);
+        recur(state, child, idx, Direction::Left, fn);
 
         for (auto&& [idx, child] : nodes | views::drop(middle) | views::enumerate)
-            recur(state, child, idx, Direction::Right, fn);
+        recur(state, child, idx, Direction::Right, fn);
 
     }
 
@@ -130,10 +131,10 @@ private:
         recur_without_offset(state, nodes[middle], fn);
 
         for (auto&& [idx, child] : nodes | views::take(middle-1) | views::enumerate)
-            recur(state, child, idx, Direction::Left, fn);
+        recur(state, child, idx, Direction::Left, fn);
 
         for (auto&& [idx, child] : nodes | views::drop(middle) | views::enumerate)
-            recur(state, child, idx, Direction::Right, fn);
+        recur(state, child, idx, Direction::Right, fn);
 
     }
 
@@ -201,7 +202,7 @@ private:
 
         std::vector<clang::Stmt*> children;
         for (auto& child : stmt->children())
-            children.push_back(child);
+        children.push_back(child);
 
         auto thunk = [&](clang::Stmt* stmt, RenderState state) {
             handle_stmt(stmt, state);
