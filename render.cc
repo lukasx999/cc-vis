@@ -106,17 +106,32 @@ void x() {
     recur<B>(B{}, bar);
 }
 
+// struct S {
+//
+//     void foo(std::function<void(S*)> fn) {
+//         fn(this);
+//     }
+//
+//     void baz() {
+//     }
+//
+//     void bar() {
+//         foo([](S* s) {s->baz();});
+//     }
+//
+// };
+
 struct S {
 
-    void foo(std::function<void(S*)> fn) {
-        fn(this);
+    void foo(std::function<void()> fn) {
+        fn();
     }
 
     void baz() {
     }
 
     void bar() {
-        foo([](S* s) {s->baz();});
+        foo([&]() {baz();});
     }
 
 };

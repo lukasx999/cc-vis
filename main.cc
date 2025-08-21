@@ -55,27 +55,11 @@ private:
         float spacing;
     };
 
-    enum class Direction {
-        Left, Right
-    };
+    enum class Direction { Left, Right };
 
+    // takes `this` as an argument, to allow passing methods via thunks
     template <ast_node Node>
     using NodeHandler = std::function<void(ASTRenderer*, Node, State)>;
-
-    void handle_decl(clang::Decl* decl, State state) {
-
-        rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
-
-        auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl);
-        if (decl_ctx != nullptr) {
-            for (auto& decl : decl_ctx->decls())
-                handle_decl(decl, state);
-        }
-
-        if (decl->hasBody())
-            handle_stmt(decl->getBody(), state);
-
-    }
 
     template <ast_node Node>
     void recur(State state, Node child, size_t idx, Direction dir, NodeHandler<Node> fn) {
@@ -134,6 +118,21 @@ private:
         for (auto&& [idx, child] : children | views::drop(middle) | views::enumerate) {
             recur(state, child, idx, Direction::Right, fn);
         }
+    }
+
+    void handle_decl(clang::Decl* decl, State state) {
+
+        rl::DrawCircleV(state.pos, m_node_radius, m_decl_color);
+
+        auto decl_ctx = llvm::dyn_cast_or_null<clang::DeclContext>(decl);
+        if (decl_ctx != nullptr) {
+            for (auto& decl : decl_ctx->decls())
+                handle_decl(decl, state);
+        }
+
+        if (decl->hasBody())
+            handle_stmt(decl->getBody(), state);
+
     }
 
     void handle_stmt(clang::Stmt* stmt, State state) {
